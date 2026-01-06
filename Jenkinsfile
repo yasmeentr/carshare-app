@@ -7,10 +7,6 @@ pipeline {
     disableConcurrentBuilds()
   }
 
-  tools {
-    maven "Maven-3.9"
-  }
-
   environment {
     APP_NAME             = "carshare-app"
     // Eviter l'interpolation au moment du parse: mettre une chaîne simple ici
