@@ -1,8 +1,13 @@
 app/model/Booking.class
 app/servlet/LogoutServlet.class
 app/servlet/DriverTripsServlet.class
+<<<<<<< HEAD
 app/servlet/MyTripsServlet.class
 app/servlet/TripDetailsServlet.class
+=======
+app/servlet/TripDetailsServlet.class
+app/servlet/MyTripsServlet.class
+>>>>>>> a39c169 (init carshare-app)
 app/servlet/RegisterServlet.class
 app/servlet/CreateTripServlet.class
 app/model/User.class

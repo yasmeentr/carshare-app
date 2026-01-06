@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 /media/sf_PASS/URCA/aaa/carshare-dev/src/main/java/app/servlet/DeleteTripServlet.java
 /media/sf_PASS/URCA/aaa/carshare-dev/src/main/java/app/servlet/MyTripsServlet.java
 /media/sf_PASS/URCA/aaa/carshare-dev/src/main/java/app/servlet/RegisterServlet.java
@@ -14,3 +15,21 @@
 /media/sf_PASS/URCA/aaa/carshare-dev/src/main/java/app/util/DBUtil.java
 /media/sf_PASS/URCA/aaa/carshare-dev/src/main/java/app/servlet/HomeServlet.java
 /media/sf_PASS/URCA/aaa/carshare-dev/src/main/java/app/model/User.java
+=======
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/model/User.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/HomeServlet.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/RegisterServlet.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/TripDetailsServlet.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/DeleteTripServlet.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/MyTripsServlet.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/model/Booking.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/model/Trip.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/dao/UserDAO.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/LoginServlet.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/DriverTripsServlet.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/util/DBUtil.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/ProfileServlet.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/CreateTripServlet.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/LogoutServlet.java
+/home/kali/Documents/809/aaa/carshare-dev/src/main/java/app/servlet/PassengerTripsServlet.java
+>>>>>>> a39c169 (init carshare-app)
