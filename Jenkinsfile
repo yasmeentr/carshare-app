@@ -6,11 +6,11 @@ pipeline {
     APP_NAME = "carshare-app"
     WAR_PATH = "target/${APP_NAME}.war"
 
-    # Tomcat natif (host)
+    // Tomcat natif (host)
     TOMCAT_WEBAPPS = "/var/lib/tomcat10/webapps"
 
-    # False => http://localhost:8090/carshare-app/
-    # True  => http://localhost:8090/
+    // False => http://localhost:8090/carshare-app/
+    // True  => http://localhost:8090/
     DEPLOY_AS_ROOT = "false"
 
     COMPOSE_FILE = "docker-compose.yml"
