@@ -1,12 +1,12 @@
 
 pipeline {
   agent any
-
   stages {
     stage('Sanity') {
       steps {
-        echo 'Jenkinsfile OK (pipeline minimal).'
+        echo 'Jenkinsfile OK'
         sh "echo 'Shell OK'"
       }
     }
   }
+}
