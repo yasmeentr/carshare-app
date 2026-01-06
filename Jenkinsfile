@@ -13,15 +13,11 @@ pipeline {
 
   environment {
     APP_NAME             = "carshare-app"
-    // Evite l'interpolation dans environment: on met une chaîne simple
+    // Eviter l'interpolation au moment du parse: mettre une chaîne simple ici
     WAR_PATH             = "target/carshare-app.war"
-    // Tomcat natif (host)
     TOMCAT_WEBAPPS       = "/var/lib/tomcat10/webapps"
-
-    // False => http://localhost:8090/carshare-app/
-    // True  => http://localhost:8090/
+    // false => http://localhost:8090/carshare-app/ ; true => http://localhost:8090/
     DEPLOY_AS_ROOT       = "false"
-
     COMPOSE_FILE         = "docker-compose.yml"
     COMPOSE_PROJECT_NAME = "carshare"
     GIT_URL              = "https://github.com/yasmeentr/carshare-app.git"
@@ -53,7 +49,7 @@ pipeline {
     stage("Copy WAR into Tomcat native") {
       steps {
         script {
-          // En bloc script, utilise env.VAR
+          // En bloc script, utiliser env.VAR
           def targetName = (env.DEPLOY_AS_ROOT == "true") ? "ROOT.war" : "${env.APP_NAME}.war"
           sh """
             set -e
@@ -103,7 +99,8 @@ pipeline {
       echo "Déploiement OK !"
       echo "URL : http://localhost:8090/${env.DEPLOY_AS_ROOT == 'true' ? '' : env.APP_NAME + '/'}"
     }
-    failure {
+       failure {
       echo "Échec du pipeline."
     }
   }
+}
