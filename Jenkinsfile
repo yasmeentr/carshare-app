@@ -49,7 +49,7 @@ pipeline {
         sh """
           set -e
           # Attention: -v --rmi all supprime volumes et images (destructif et lent)
-          sudo docker compose -p ${env.COMPOSE_PROJECT_NAME} -f ${env.COMPOSE_FILE} down -v --rmi all || true
+          sudo docker compose -p ${env.COMPOSE_PROJECT_NAME} -f ${env.COMPOSE_FILE} down || true
         """
       }
     }
