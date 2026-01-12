@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8090:8080"
+    volumes:
+      - ./target/carshare-app:/usr/local/tomcat/webapps/carshare-app/
     networks:
       - carshare
     depends_on:
