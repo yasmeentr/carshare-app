@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        PROJECT_DIR = '/path/to/your/project'  // Mettez à jour avec le chemin correct
+        PROJECT_DIR = '.'  // Mettez à jour avec le chemin correct
     }
 
     stages {
