@@ -9,6 +9,9 @@ services:
       - ./target/carshare-app:/usr/local/tomcat/webapps/carshare-app/
     ports:
       - "8090:8080"
+      
+    volumes:
+      - ./target/carshare-app.war:/usr/local/tomcat/webapps/ROOT.war
     networks:
       - carshare
     depends_on:
