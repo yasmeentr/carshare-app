@@ -57,20 +57,7 @@ pipeline {
             }
         }
 
-        stage('Cleanup') {
-            steps {
-                script {
-                    // Arrêter et supprimer les conteneurs Docker après le test
-                    sh 'docker-compose down'
-                }
-            }
-        }
     }
 
-    post {
-        always {
-            // Nettoyage final, garantir que les conteneurs sont toujours arrêtés
-            sh 'docker-compose down'
-        }
-    }
+   
 }
