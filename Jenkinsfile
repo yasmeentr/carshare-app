@@ -46,12 +46,12 @@ pipeline {
             steps {
                 script {
                     // Vérifiez que votre application est accessible en localhost
-                    // Vous pouvez tester la disponibilité d'un port, comme 8080 pour Tomcat
-                    def checkApp = sh(script: 'curl --silent --fail http://localhost:8080', returnStatus: true)
+                    // Vous pouvez tester la disponibilité d'un port, comme 8090 pour Tomcat
+                    def checkApp = sh(script: 'curl --silent --fail http://localhost:8090', returnStatus: true)
                     if (checkApp != 0) {
-                        error "L'application n'est pas accessible sur localhost:8080"
+                        error "L'application n'est pas accessible sur localhost:8090"
                     } else {
-                        echo "L'application est accessible sur localhost:8080"
+                        echo "L'application est accessible sur localhost:8090"
                     }
                 }
             }
