@@ -47,11 +47,11 @@ pipeline {
                 script {
                     // Vérifiez que votre application est accessible en localhost
                     // Vous pouvez tester la disponibilité d'un port, comme 8090 pour Tomcat
-                    def checkApp = sh(script: 'curl --silent --fail http://localhost:8090', returnStatus: true)
+                    def checkApp = sh(script: 'curl --silent --fail http://localhost:8090/carshare-app', returnStatus: true)
                     if (checkApp != 0) {
-                        error "L'application n'est pas accessible sur localhost:8090"
+                        error "L'application n'est pas accessible sur localhost:8090/carshare-app"
                     } else {
-                        echo "L'application est accessible sur localhost:8090"
+                        echo "L'application est accessible sur localhost:8090/carshare-app"
                     }
                 }
             }
