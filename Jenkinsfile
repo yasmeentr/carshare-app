@@ -40,15 +40,7 @@ pipeline {
             }
         }
 
-        stage('Run Tests') {
-            steps {
-                script {
-                    // Si vous avez des tests à exécuter sur votre projet, vous pouvez les inclure ici
-                    // Exemple de test avec Maven si vous avez un projet Java :
-                    // sh 'mvn test'
-                }
-            }
-        }
+        // stage de tests
 
         stage('Check if App is Accessible') {
             steps {
