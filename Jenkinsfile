@@ -1,76 +1,71 @@
-
 pipeline {
-  agent any
-
-  options {
-    timeout(time: 30, unit: 'MINUTES')
-    disableConcurrentBuilds()
-  }
-
-  environment {
-    APP_NAME             = "carshare-app"
-    // Eviter l'interpolation au moment du parse: mettre une chaîne simple ici
-    WAR_PATH             = "target/carshare-app.war"
-    TOMCAT_WEBAPPS       = "/var/lib/tomcat10/webapps"
-    // false => http://localhost:8090/carshare-app/ ; true => http://localhost:8090/
-    DEPLOY_AS_ROOT       = "false"
-    COMPOSE_FILE         = "docker-compose.yml"
-    COMPOSE_PROJECT_NAME = "carshare"
-    GIT_URL              = "https://github.com/yasmeentr/carshare-app.git"
-    GIT_BRANCH           = "main"
-  }
-
-  stages {
-    stage("Checkout") {
-      steps {
-        git branch: env.GIT_BRANCH, url: env.GIT_URL
-      }
-    }
-
-    stage("Build WAR") {
-      steps {
-        sh """
-          set -e
-          mvn -B clean install -DskipTests
-          ls -l target || true
-        """
-      }
-      post {
-        success {
-          archiveArtifacts artifacts: "${env.WAR_PATH}", fingerprint: true
-        }
-      }
-    }
-
+    agent any
     
-
-    stage("Docker Compose DOWN") {
-      steps {
-        sh """
-          set -e
-          # Attention: -v --rmi all supprime volumes et images (destructif et lent)
-          sudo docker compose -p ${env.COMPOSE_PROJECT_NAME} -f ${env.COMPOSE_FILE} down || true
-        """
-      }
+    environment {
+        // Set any environment variables if needed
+        PROJECT_DIR = 'carshare-dev'
     }
 
-    stage("Docker Compose UP") {
-      steps {
-        sh """
-          set -e
-          sudo docker compose -p ${env.COMPOSE_PROJECT_NAME} -f ${env.COMPOSE_FILE} up -d --build
-        """
-      }
+    stages {
+        stage('Checkout') {
+            steps {
+                // Checkout the code from your repository (assuming it's using git)
+                checkout scm
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                // Build the Docker image if needed
+                script {
+                    // Assuming Dockerfile is in the root directory
+                    sh 'docker build -t carshare-dev .'
+                }
+            }
+        }
+        
+        stage('Build with Maven') {
+            steps {
+                // Build the Java project using Maven
+                script {
+                    sh 'mvn clean install'
+                }
+            }
+        }
+        
+        stage('Run Tests') {
+            steps {
+                // Run the tests if applicable
+                script {
+                    sh 'mvn test'
+                }
+            }
+        }
+        
+        stage('Deploy') {
+            steps {
+                // Deploy the application, e.g., using Docker Compose
+                script {
+                    // Run docker-compose to deploy the application
+                    sh 'docker-compose up -d'
+                }
+            }
+        }
+        
+        stage('Cleanup') {
+            steps {
+                // Clean up resources after deployment
+                script {
+                    sh 'docker-compose down'
+                }
+            }
+        }
     }
-  }
 
-  post {
-    success {
-      echo "Déploiement OK !"
-      echo "URL : http://localhost:8090/${env.DEPLOY_AS_ROOT == 'true' ? '' : env.APP_NAME + '/'}"
+    post {
+        always {
+            // Always clean up any resources, e.g., stopping Docker containers
+            sh 'docker-compose down'
+        }
     }
-       failure {
-      echo "Échec du pipeline."
-    }
-  }
 }
