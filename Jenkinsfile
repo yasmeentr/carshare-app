@@ -1,61 +1,74 @@
 pipeline {
     agent any
-    
+
     environment {
-        // Set any environment variables if needed
-        PROJECT_DIR = 'carshare-dev'
+        PROJECT_DIR = '/path/to/your/project'  // Mettez à jour avec le chemin correct
     }
 
     stages {
         stage('Checkout') {
             steps {
-                // Checkout the code from your repository (assuming it's using git)
+                // Checkout du code à partir de votre dépôt Git
                 checkout scm
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
-                // Build the Docker image if needed
                 script {
-                    // Assuming Dockerfile is in the root directory
-                    sh 'docker build -t carshare-dev .'
+                    // Construire l'image Docker si nécessaire
+                    sh 'docker-compose build'
                 }
             }
         }
-        
-        stage('Build with Maven') {
+
+        stage('Start Containers') {
             steps {
-                // Build the Java project using Maven
                 script {
-                    sh 'mvn clean install'
-                }
-            }
-        }
-        
-        stage('Run Tests') {
-            steps {
-                // Run the tests if applicable
-                script {
-                    sh 'mvn test'
-                }
-            }
-        }
-        
-        stage('Deploy') {
-            steps {
-                // Deploy the application, e.g., using Docker Compose
-                script {
-                    // Run docker-compose to deploy the application
+                    // Démarrer les conteneurs Docker en mode détaché (en arrière-plan)
                     sh 'docker-compose up -d'
                 }
             }
         }
-        
+
+        stage('Wait for Containers') {
+            steps {
+                script {
+                    // Attendre que les services soient accessibles (vous pouvez ajuster le temps)
+                    sleep 10
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                script {
+                    // Si vous avez des tests à exécuter sur votre projet, vous pouvez les inclure ici
+                    // Exemple de test avec Maven si vous avez un projet Java :
+                    // sh 'mvn test'
+                }
+            }
+        }
+
+        stage('Check if App is Accessible') {
+            steps {
+                script {
+                    // Vérifiez que votre application est accessible en localhost
+                    // Vous pouvez tester la disponibilité d'un port, comme 8080 pour Tomcat
+                    def checkApp = sh(script: 'curl --silent --fail http://localhost:8080', returnStatus: true)
+                    if (checkApp != 0) {
+                        error "L'application n'est pas accessible sur localhost:8080"
+                    } else {
+                        echo "L'application est accessible sur localhost:8080"
+                    }
+                }
+            }
+        }
+
         stage('Cleanup') {
             steps {
-                // Clean up resources after deployment
                 script {
+                    // Arrêter et supprimer les conteneurs Docker après le test
                     sh 'docker-compose down'
                 }
             }
@@ -64,7 +77,7 @@ pipeline {
 
     post {
         always {
-            // Always clean up any resources, e.g., stopping Docker containers
+            // Nettoyage final, garantir que les conteneurs sont toujours arrêtés
             sh 'docker-compose down'
         }
     }
