@@ -42,33 +42,7 @@ pipeline {
       }
     }
 
-    stage("Copy WAR into Tomcat native") {
-      steps {
-        script {
-          // En bloc script, utiliser env.VAR
-          def targetName = (env.DEPLOY_AS_ROOT == "true") ? "ROOT.war" : "${env.APP_NAME}.war"
-          sh """
-            set -e
-            test -f ${env.WAR_PATH}
-            sudo rm -f ${env.TOMCAT_WEBAPPS}/${targetName} || true
-            sudo cp ${env.WAR_PATH} ${env.TOMCAT_WEBAPPS}/${targetName}
-          """
-        }
-      }
-    }
-
-    stage("Restart Tomcat") {
-      steps {
-        sh """
-          set -e
-          if systemctl status tomcat10 >/dev/null 2>&1; then
-            sudo systemctl restart tomcat10
-          else
-            echo 'Service tomcat10 absent - étape ignorée.'
-          fi
-        """
-      }
-    }
+    
 
     stage("Docker Compose DOWN") {
       steps {
