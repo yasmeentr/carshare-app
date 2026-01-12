@@ -4,4 +4,9 @@
 
 <web-app>
   <display-name>Archetype Created Web Application</display-name>
+  <servlet-class>com.example.CarshareServlet</servlet-class>
 </web-app>
+<servlet-mapping>
+    <servlet-name>CarshareServlet</servlet-name>
+    <url-pattern>/carshare-app/*</url-pattern>
+</servlet-mapping>
