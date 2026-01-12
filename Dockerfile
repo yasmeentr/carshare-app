@@ -1,5 +1,12 @@
 FROM tomcat
 
+
+# Nettoyer les apps par défaut
+RUN rm -rf /usr/local/tomcat/webapps/*
+# Copier ton WAR en ROOT
+COPY target/carshare-app.war /usr/local/tomcat/webapps/ROOT.war
+
+
 # Initialisation de tomcat
 RUN cp -R webapps.dist/* webapps/
 
