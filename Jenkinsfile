@@ -8,10 +8,10 @@ pipeline {
 
   environment {
     // Base URL de l'app servie par Tomcat. Ajuste si ton app est sous /monapp
-    APP_BASE_URL       = "http://localhost:8080"
-    APP_HEALTH_PATH    = "/"                 // ex: "/monapp/health" si tu as un endpoint
+    APP_BASE_URL       = "http://localhost:8090"
+    APP_HEALTH_PATH    = "/carshare-app"                 // ex: "/monapp/health" si tu as un endpoint
     // Pour tes tests Selenium :
-    E2E_BASE_URL       = "http://localhost:8080"
+    E2E_BASE_URL       = "http://localhost:8090/carshare-app"
     SELENIUM_HEADLESS  = "1"
     SELENIUM_CHROME_ARGS = "--headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --window-size=1920,1080"
     // Cache pip local pour accélérer
