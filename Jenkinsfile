@@ -1,82 +1,104 @@
 pipeline {
-    agent any
+
+    agent {
+        docker {
+            image 'python:3.13'
+            args '--memory=4g --cpus=2 --shm-size=2g'
+        }
+    }
+
+    options {
+        timeout(time: 30, unit: 'MINUTES')
+        ansiColor('xterm')
+    }
 
     environment {
-        PROJECT_DIR = '.'  // Mettez à jour avec le chemin correct
+        E2E_BASE_URL = "http://localhost:8090/carshare-app"     // ajuster si besoin
+        SELENIUM_HEADLESS = "1"
     }
 
     stages {
+
         stage('Checkout') {
             steps {
-                // Checkout du code à partir de votre dépôt Git
                 checkout scm
             }
         }
 
-        stage('Build Docker Image') {
+        stage('Prepare Environment') {
             steps {
-                script {
-                    // Construire l'image Docker si nécessaire
-                    sh 'docker-compose build'
-                }
+                sh """
+                python -m venv .venv
+                . .venv/bin/activate
+                pip install --upgrade pip wheel
+                pip install -r requirements.txt
+                """
             }
         }
 
-        stage('Start Containers') {
+        stage('Start Docker Services') {
             steps {
-                script {
-                    // Démarrer les conteneurs Docker en mode détaché (en arrière-plan)
-                    sh 'docker-compose up -d'
-                }
+                sh """
+                echo '[INFO] Starting docker-compose...'
+                docker compose down --remove-orphans || true
+                docker compose build --parallel
+
+                # Start containers
+                docker compose up -d
+
+                echo '[INFO] Waiting for DB readiness...'
+                docker compose exec db bash -c '
+                    until pg_isready -U postgres; do
+                        echo "DB not ready, waiting..."
+                        sleep 2
+                    done
+                '
+
+                echo '[INFO] Waiting for backend API...'
+                for i in {1..30}; do
+                    curl -sf ${E2E_BASE_URL}/health && break
+                    echo "Backend not ready, waiting..."
+                    sleep 2
+                done
+                """
             }
         }
 
-        stage('Wait for Containers') {
+        stage('Run Selenium Tests') {
             steps {
-                script {
-                    // Attendre que les services soient accessibles (vous pouvez ajuster le temps)
-                    sleep 10
+                sh """
+                . .venv/bin/activate
+
+                export SELENIUM_CHROME_ARGS="--headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --window-size=1920,1080"
+
+                python -c "import selenium; print('[INFO] Selenium version:', selenium.__version__)"
+                
+                echo '[INFO] Running Selenium tests...'
+                python tests/test_selenium_register.py || EXIT=\$?
+
+                exit \${EXIT:-0}
+                """
+            }
+            post {
+                always {
+                    echo "[INFO] Archiving artifacts…"
+                    archiveArtifacts artifacts: '**/*.png, **/*.html', allowEmptyArchive: true
                 }
             }
-        }
-
-        // stage de tests
-
-        stage('Check if App is Accessible') {
-            steps {
-                script {
-                    // Vérifiez que votre application est accessible en localhost
-                    // Vous pouvez tester la disponibilité d'un port, comme 8090 pour Tomcat
-                    def checkApp = sh(script: 'curl --silent --fail http://localhost:8090/carshare-app', returnStatus: true)
-                    if (checkApp != 0) {
-                        error "L'application n'est pas accessible sur localhost:8090/carshare-app"
-                    } else {
-                        echo "L'application est accessible sur localhost:8090/carshare-app"
-                    }
-                }
-            }
-        }
-
-        stage ('Tests Fonctionnels Selenium'){
-          steps {
-            echo "Execution des tests fonctionnels sur la préprod ... "
-            
-            sh '''
-              set -e
-              python3 -m venv .venv
-              . .venv/bin/activate
-              pip install --upgrade pip
-              pip install selenium
-        
-              export BASE_URL="http://localhost:8090"
-              export CONTEXT_PATH="/carshare-app"
-        
-              python tests/test_selenium_register.py
-            '''
-          }
         }
 
     }
 
-   
+    post {
+        always {
+            echo "[INFO] Cleaning Docker..."
+            sh "docker compose down --remove-orphans || true"
+        }
+        success {
+            echo "🎉 Pipeline success"
+        }
+        failure {
+            echo "❌ Pipeline failed – artifacts saved"
+        }
+    }
 }
