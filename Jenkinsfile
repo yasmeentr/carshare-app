@@ -3,19 +3,19 @@ pipeline {
 
   options {
     timeout(time: 30, unit: 'MINUTES')
-    // no ansiColor here to avoid compilation on older controllers
-    // timestamps() // tu peux décommenter si le plugin Timestamps est présent
+    // timestamps() // décommente si le plugin est installé
   }
 
   environment {
-    // Ajuste si ton backend écoute ailleurs (ex: http://localhost:3000 ou http://localhost:8000)
-    E2E_BASE_URL = "http://localhost:8000"
-    // Utilisé par tes tests pour activer headless
-    SELENIUM_HEADLESS = "1"
-    // Arguments Chrome pour CI lente
+    // Base URL de l'app servie par Tomcat. Ajuste si ton app est sous /monapp
+    APP_BASE_URL       = "http://localhost:8080"
+    APP_HEALTH_PATH    = "/"                 // ex: "/monapp/health" si tu as un endpoint
+    // Pour tes tests Selenium :
+    E2E_BASE_URL       = "http://localhost:8080"
+    SELENIUM_HEADLESS  = "1"
     SELENIUM_CHROME_ARGS = "--headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --window-size=1920,1080"
-    // Active un cache pip local au workspace pour accélérer les réinstallations
-    PIP_CACHE_DIR = ".pip-cache"
+    // Cache pip local pour accélérer
+    PIP_CACHE_DIR      = ".pip-cache"
   }
 
   stages {
@@ -31,14 +31,12 @@ pipeline {
           set -euxo pipefail
 
           python3 -V
-          which python3 || true
 
-          # Venv
+          # Crée l'environnement virtuel Python
           python3 -m venv .venv
           . .venv/bin/activate
 
           python -m pip install --upgrade pip wheel
-          # Cache pip local
           mkdir -p "$PIP_CACHE_DIR"
 
           if [ -f requirements.txt ]; then
@@ -46,7 +44,7 @@ pipeline {
             pip install --cache-dir "$PIP_CACHE_DIR" -r requirements.txt
           fi
 
-          # Affiche version Selenium si installée dans requirements.txt
+          # Info Selenium
           python - <<'PY'
 import importlib
 try:
@@ -76,28 +74,41 @@ PY
           echo "[INFO] Start services..."
           docker compose up -d
 
-          echo "[INFO] Wait for DB readiness (PostgreSQL)..."
-          # NOTE: adapte le service 'db' et l'utilisateur si nécessaire
-          docker compose exec -T db bash -lc '
-            for i in $(seq 1 30); do
-              if pg_isready -U postgres; then
-                echo "DB is ready."
-                exit 0
+          echo "[INFO] Waiting for MySQL service readiness..."
+          # Nom du service: "mysql" (vu dans tes logs). Si différent, adapte-le.
+          # On tente d'abord avec mot de passe, sinon sans.
+          docker compose exec -T mysql bash -lc '
+            set -e
+            tries=30
+            wait_sec=2
+            echo "Checking MySQL readiness inside container..."
+            for i in $(seq 1 $tries); do
+              if [ -n "$MYSQL_ROOT_PASSWORD" ]; then
+                if mysqladmin ping -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" --silent; then
+                  echo "MySQL is ready (with password)."
+                  exit 0
+                fi
+              else
+                if mysqladmin ping -h 127.0.0.1 -u root --silent; then
+                  echo "MySQL is ready (no password)."
+                  exit 0
+                fi
               fi
-              echo "DB not ready, waiting..."
-              sleep 2
+              echo "MySQL not ready yet... ($i/$tries)"
+              sleep $wait_sec
             done
-            echo "DB failed to become ready in time."
+            echo "ERROR: MySQL failed to become ready in time."
             exit 1
           '
 
-          echo "[INFO] Wait for backend health endpoint..."
-          for i in $(seq 1 30); do
-            if curl -sf "$E2E_BASE_URL/health" > /dev/null; then
-              echo "Backend is ready."
+          echo "[INFO] Waiting for Tomcat (HTTP ${APP_BASE_URL}${APP_HEALTH_PATH}) ..."
+          # On attend que Tomcat réponde au moins 200/3xx sur la racine (ou chemin santé)
+          for i in $(seq 1 60); do
+            if curl -sf "${APP_BASE_URL}${APP_HEALTH_PATH}" > /dev/null; then
+              echo "Tomcat/App is ready."
               break
             fi
-            echo "Backend not ready, waiting..."
+            echo "Tomcat not ready yet... ($i/60)"
             sleep 2
           done
         '''
@@ -110,14 +121,12 @@ PY
           set -euxo pipefail
           . .venv/bin/activate
 
-          # Expose Chrome args to tests; tes tests doivent les consommer (via env)
           export SELENIUM_CHROME_ARGS="$SELENIUM_CHROME_ARGS"
           export SELENIUM_HEADLESS="$SELENIUM_HEADLESS"
           export E2E_BASE_URL="$E2E_BASE_URL"
 
           echo "[INFO] Running Selenium tests..."
-          # Si tu as plusieurs tests, tu peux lancer pytest -q
-          # Ici on suit ton fichier existant:
+          # Exemple minimal : lance ton test existant
           python tests/test_selenium_register.py
         '''
       }
