@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+    
+    tools {
+        maven 'Maven 3.9.6' // À adapter selon votre configuration Jenkins
+        jdk 'JDK 21'        // À adapter selon votre configuration Jenkins
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '📥 Récupération du code source...'
+                checkout scm
+            }
+        }
+        
+        stage('Build Maven') {
+            steps {
+                echo '🔨 Compilation et packaging avec Maven...'
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+        
+        stage('Archive Artifacts') {
+            steps {
+                echo '📦 Archivage du WAR...'
+                archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo '✅ Build Maven réussi !'
+            echo 'Fichier WAR généré : target/carshare-app.war'
+        }
+        failure {
+            echo '❌ Build Maven échoué'
+        }
+    }
+}

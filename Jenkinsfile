@@ -1,154 +1,160 @@
 pipeline {
-  agent any
-
-  options {
-    timeout(time: 30, unit: 'MINUTES')
-    // timestamps() // décommente si le plugin est installé
-  }
-
-  environment {
-    // Base URL de l'app servie par Tomcat. Ajuste si ton app est sous /monapp
-    APP_BASE_URL       = "http://localhost:8090"
-    APP_HEALTH_PATH    = "/carshare-app"                 // ex: "/monapp/health" si tu as un endpoint
-    // Pour tes tests Selenium :
-    E2E_BASE_URL       = "http://localhost:8090/carshare-app"
-    SELENIUM_HEADLESS  = "1"
-    SELENIUM_CHROME_ARGS = "--headless=new --disable-gpu --no-sandbox --disable-dev-shm-usage --window-size=1920,1080"
-    // Cache pip local pour accélérer
-    PIP_CACHE_DIR      = ".pip-cache"
-  }
-
-  stages {
-    stage('Checkout') {
-      steps {
-        checkout scm
-      }
+    agent any
+    
+    tools {
+        maven 'Maven 3.9.6' // Assurez-vous que ce nom correspond à votre configuration Maven dans Jenkins
+        jdk 'JDK 21'        // Assurez-vous que ce nom correspond à votre configuration JDK dans Jenkins
     }
-
-    stage('Python Env') {
-      steps {
-        sh '''
-          set -euxo pipefail
-
-          python3 -V
-
-          # Crée l'environnement virtuel Python
-          python3 -m venv .venv
-          . .venv/bin/activate
-
-          python -m pip install --upgrade pip wheel
-          mkdir -p "$PIP_CACHE_DIR"
-
-          if [ -f requirements.txt ]; then
-            PIP_CACHE_DIR="$PIP_CACHE_DIR" \
-            pip install --cache-dir "$PIP_CACHE_DIR" -r requirements.txt
-          fi
-
-          # Info Selenium
-          python - <<'PY'
-import importlib
-try:
-    s = importlib.import_module("selenium")
-    print("[INFO] Selenium version:", s.__version__)
-except Exception as e:
-    print("[WARN] Selenium not found in venv:", e)
-PY
-        '''
-      }
+    
+    environment {
+        // Variables d'environnement Docker
+        DOCKER_REGISTRY = 'docker.io'
+        DOCKER_IMAGE_NAME = 'carshare-app'
+        DOCKER_COMPOSE_VERSION = '2.24.0'
+        
+        // Variables pour l'application
+        TOMCAT_PORT = '8090'
+        MYSQL_PORT = '3310'
+        PHPMYADMIN_PORT = '8091'
     }
-
-    stage('Docker Compose Up') {
-      steps {
-        sh '''
-          set -euxo pipefail
-
-          echo "[INFO] Docker version:"
-          docker --version
-
-          echo "[INFO] Bring down leftovers..."
-          docker compose down --remove-orphans || true
-
-          echo "[INFO] Build images (using cache if available)..."
-          docker compose build --parallel
-
-          echo "[INFO] Start services..."
-          docker compose up -d
-
-          echo "[INFO] Waiting for MySQL service readiness..."
-          # Nom du service: "mysql" (vu dans tes logs). Si différent, adapte-le.
-          # On tente d'abord avec mot de passe, sinon sans.
-          docker compose exec -T mysql bash -lc '
-            set -e
-            tries=30
-            wait_sec=2
-            echo "Checking MySQL readiness inside container..."
-            for i in $(seq 1 $tries); do
-              if [ -n "$MYSQL_ROOT_PASSWORD" ]; then
-                if mysqladmin ping -h 127.0.0.1 -u root -p"$MYSQL_ROOT_PASSWORD" --silent; then
-                  echo "MySQL is ready (with password)."
-                  exit 0
-                fi
-              else
-                if mysqladmin ping -h 127.0.0.1 -u root --silent; then
-                  echo "MySQL is ready (no password)."
-                  exit 0
-                fi
-              fi
-              echo "MySQL not ready yet... ($i/$tries)"
-              sleep $wait_sec
-            done
-            echo "ERROR: MySQL failed to become ready in time."
-            exit 1
-          '
-
-          echo "[INFO] Waiting for Tomcat (HTTP ${APP_BASE_URL}${APP_HEALTH_PATH}) ..."
-          # On attend que Tomcat réponde au moins 200/3xx sur la racine (ou chemin santé)
-          for i in $(seq 1 60); do
-            if curl -sf "${APP_BASE_URL}${APP_HEALTH_PATH}" > /dev/null; then
-              echo "Tomcat/App is ready."
-              break
-            fi
-            echo "Tomcat not ready yet... ($i/60)"
-            sleep 2
-          done
-        '''
-      }
-    }
-
-    stage('Run Selenium Tests') {
-      steps {
-        sh '''
-          set -euxo pipefail
-          . .venv/bin/activate
-
-          export SELENIUM_CHROME_ARGS="$SELENIUM_CHROME_ARGS"
-          export SELENIUM_HEADLESS="$SELENIUM_HEADLESS"
-          export E2E_BASE_URL="$E2E_BASE_URL"
-
-          echo "[INFO] Running Selenium tests..."
-          # Exemple minimal : lance ton test existant
-          python tests/test_selenium_register.py
-        '''
-      }
-      post {
-        always {
-          echo "[INFO] Archiving screenshots and html artifacts (if any)..."
-          archiveArtifacts artifacts: '**/*.png, **/*.html', allowEmptyArchive: true
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Récupération du code source...'
+                checkout scm
+            }
         }
-      }
+        
+        stage('Vérification des prérequis') {
+            steps {
+                script {
+                    echo 'Vérification de Maven...'
+                    sh 'mvn --version'
+                    
+                    echo 'Vérification de Java...'
+                    sh 'java -version'
+                    
+                    echo 'Vérification de Docker...'
+                    sh 'docker --version'
+                    
+                    echo 'Vérification de Docker Compose...'
+                    sh 'docker compose version'
+                }
+            }
+        }
+        
+        stage('Clean') {
+            steps {
+                echo 'Nettoyage du projet...'
+                sh 'mvn clean'
+            }
+        }
+        
+        stage('Compile') {
+            steps {
+                echo 'Compilation du projet...'
+                sh 'mvn compile'
+            }
+        }
+        
+        stage('Test') {
+            steps {
+                echo 'Exécution des tests...'
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    // Publication des résultats de tests
+                    junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+                }
+            }
+        }
+        
+        stage('Package') {
+            steps {
+                echo 'Packaging de l\'application...'
+                sh 'mvn package -DskipTests'
+            }
+            post {
+                success {
+                    // Archivage du WAR généré
+                    archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+                }
+            }
+        }
+        
+        stage('Build Docker Image') {
+            steps {
+                echo 'Construction de l\'image Docker...'
+                script {
+                    sh 'docker build -t ${DOCKER_IMAGE_NAME}:${BUILD_NUMBER} .'
+                    sh 'docker tag ${DOCKER_IMAGE_NAME}:${BUILD_NUMBER} ${DOCKER_IMAGE_NAME}:latest'
+                }
+            }
+        }
+        
+        stage('Stop Previous Containers') {
+            steps {
+                echo 'Arrêt des conteneurs précédents...'
+                script {
+                    // Arrêt et suppression des conteneurs existants (ignore les erreurs si rien n'existe)
+                    sh 'docker compose down -v || true'
+                }
+            }
+        }
+        
+        stage('Deploy with Docker Compose') {
+            steps {
+                echo 'Déploiement avec Docker Compose...'
+                script {
+                    // Lancement des conteneurs
+                    sh 'docker compose up -d --build'
+                    
+                    // Attendre que les services soient prêts
+                    echo 'Attente du démarrage des services...'
+                    sh 'sleep 30'
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                echo 'Vérification de la santé de l\'application...'
+                script {
+                    // Vérifier que Tomcat répond
+                    sh '''
+                        for i in {1..30}; do
+                            if curl -f http://localhost:${TOMCAT_PORT}/carshare-app/ > /dev/null 2>&1; then
+                                echo "Application accessible !"
+                                exit 0
+                            fi
+                            echo "Tentative $i/30..."
+                            sleep 2
+                        done
+                        echo "L'application n'est pas accessible après 60 secondes"
+                        exit 1
+                    '''
+                }
+            }
+        }
     }
-  }
-
-  post {
-    always {
-      echo "[INFO] Cleaning up docker..."
-      sh 'docker compose down --remove-orphans || true'
+    
+    post {
+        always {
+            echo 'Pipeline terminé'
+            // Nettoyage des images Docker non utilisées
+            sh 'docker image prune -f || true'
+        }
+        success {
+            echo '✅ Build et déploiement réussis !'
+            echo "Application disponible sur : http://localhost:${TOMCAT_PORT}/carshare-app"
+            echo "PHPMyAdmin disponible sur : http://localhost:${PHPMYADMIN_PORT}"
+        }
+        failure {
+            echo '❌ Build ou déploiement échoué'
+            // Afficher les logs en cas d'échec
+            sh 'docker compose logs || true'
+        }
     }
-    success {
-      echo '🎉 Pipeline SUCCESS'
-    }
-    failure {
-      echo '❌ Pipeline FAILED — check archived artifacts and console logs'
-    }
-  }
 }
