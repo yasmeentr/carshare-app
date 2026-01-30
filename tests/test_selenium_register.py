@@ -1,99 +1,114 @@
-# tests/test_selenium_register.py
 import os
 import time
-import random
-import string
+from pathlib import Path
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
-BASE_URL = os.getenv("BASE_URL", "http://localhost:8090")
-CONTEXT = os.getenv("CONTEXT_PATH", "/carshare-app")
-REGISTER_URL = f"{BASE_URL}{CONTEXT}/register"
+BASE_URL = os.getenv("E2E_BASE_URL", "http://localhost:8090/carshare-app")
+EMAIL = os.getenv("TEST_EMAIL", "dylan@exemple.com")
+PASSWORD = os.getenv("TEST_PASSWORD", "dylan")
 
-def random_suffix(k=6):
-    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=k))
+SCREEN_DIR = Path("screenshots")
+SCREEN_DIR.mkdir(parents=True, exist_ok=True)
 
-def main():
-    # --- Chrome headless options ---
+def snap(driver, name: str):
+    """Capture un screenshot PNG dans ./screenshots/NAME.png"""
+    path = SCREEN_DIR / f"{name}.png"
+    ok = driver.save_screenshot(str(path))
+    print(f"[INFO] Screenshot {'OK' if ok else 'FAIL'}: {path}")
+
+def make_driver():
+    """Crée un driver Chrome headless robuste pour Jenkins."""
     opts = Options()
+    # Mode headless stable (Chrome 109+)
     opts.add_argument("--headless=new")
     opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-gpu")
     opts.add_argument("--disable-dev-shm-usage")
-    opts.add_argument("--window-size=1280,900")
-
+    opts.add_argument("--window-size=1920,1080")
+    # Réduit le bruit dans les logs
+    opts.add_experimental_option("excludeSwitches", ["enable-logging"])
     driver = webdriver.Chrome(options=opts)
-    wait = WebDriverWait(driver, 15)
+    driver.set_page_load_timeout(30)
+    return driver
 
-    username = f"bob{random_suffix()}"
-    email = f"{username}@example.com"
-    password = "P@ssw0rd-Example"
+def login_flow(driver):
+    wait = WebDriverWait(driver, 12)
+
+    # 1) Aller sur /login
+    url = f"{BASE_URL}/login"
+    print(f"[INFO] Ouverture: {url}")
+    driver.get(url)
+    snap(driver, "01_login_page_loaded")
+
+    # 2) Trouver les champs email / password
+    try:
+        email_input = wait.until(EC.presence_of_element_located((By.NAME, "email")))
+        snap(driver, "02_email_field_visible")
+    except TimeoutException as e:
+        print("[ERROR] Champ email introuvable sur /login")
+        snap(driver, "ERROR_no_email_field")
+        raise
 
     try:
-        driver.get(REGISTER_URL)
+        password_input = driver.find_element(By.NAME, "password")
+    except NoSuchElementException:
+        print("[ERROR] Champ password introuvable sur /login")
+        snap(driver, "ERROR_no_password_field")
+        raise
 
-        # Attendre le formulaire
-        wait.until(EC.presence_of_element_located((By.ID, "username")))
-        wait.until(EC.presence_of_element_located((By.ID, "email")))
-        wait.until(EC.presence_of_element_located((By.ID, "password")))
-        submit_btn = driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]')
+    # 3) Remplir le formulaire
+    email_input.clear()
+    email_input.send_keys(EMAIL)
+    password_input.clear()
+    password_input.send_keys(PASSWORD)
+    snap(driver, "03_credentials_filled")
 
-        # Remplir
-        driver.find_element(By.ID, "username").clear()
-        driver.find_element(By.ID, "username").send_keys(username)
-
-        driver.find_element(By.ID, "email").clear()
-        driver.find_element(By.ID, "email").send_keys(email)
-
-        driver.find_element(By.ID, "password").clear()
-        driver.find_element(By.ID, "password").send_keys(password)
-
-        submit_btn.click()
-
-        # Petit délai post-submit
-        time.sleep(0.5)
-
-        # Critères de succès :
-        # 1) message de succès (bloc vert)
-        # 2) redirection (URL ne se termine plus par /register)
-        redirected = not driver.current_url.rstrip("/").endswith("/register")
-
-        success_block = None
+    # 4) Cliquer sur le bouton submit
+    try:
+        submit_btn = driver.find_element(By.CSS_SELECTOR, "button[type='submit'],input[type='submit']")
+    except NoSuchElementException:
+        print("[WARN] Bouton submit non trouvé via CSS, tentative via texte.")
+        # fallback simple (si boutons nommés différemment)
         try:
-            success_block = WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located(
-                    (By.CSS_SELECTOR, ".bg-green-100.text-green-700")
-                )
-            )
-        except Exception:
-            success_block = None
+            submit_btn = driver.find_element(By.XPATH, "//button[contains(., 'Login') or contains(., 'Se connecter')]")
+        except NoSuchElementException:
+            snap(driver, "ERROR_no_submit_button")
+            raise
 
-        if redirected or success_block:
-            print("[OK] Inscription considérée comme réussie.")
-            print(f"  - Username : {username}")
-            print(f"  - Email    : {email}")
-            print(f"  - URL fin  : {driver.current_url}")
-            if success_block:
-                print(f"  - Message  : {success_block.text.strip() or '(vide)'}")
-            return
+    submit_btn.click()
+    time.sleep(0.8)  # laisser la redirection démarrer
+    snap(driver, "04_after_submit_click")
 
-        # Sinon : récupérer les erreurs éventuelles pour debug
-        error_block_text = ""
+    # 5) Attendre d'être sur /home
+    try:
+        wait.until(EC.url_contains("/home"))
+        snap(driver, "05_homepage_loaded")
+        print("[SUCCESS] Connexion réussie, page /home chargée.")
+    except TimeoutException:
+        print(f"[ERROR] Redirection vers /home non détectée. URL actuelle: {driver.current_url}")
+        snap(driver, "ERROR_home_not_reached")
+        # Enrichir le diagnostic: vérifier un message d'erreur éventuel
         try:
-            error_block = driver.find_element(By.CSS_SELECTOR, ".bg-red-100.text-red-700")
-            error_block_text = error_block.text.strip()
+            body_text = driver.find_element(By.TAG_NAME, "body").text
+            print("[DEBUG] Extrait de la page:", body_text[:500])
         except Exception:
             pass
+        raise
 
-        raise AssertionError(
-            "Aucun indicateur de succès détecté après la soumission.\n"
-            f"URL actuelle : {driver.current_url}\n"
-            f"Message d'erreur (si présent) : {error_block_text}"
-        )
-
+def main():
+    driver = make_driver()
+    try:
+        login_flow(driver)
+    except Exception as e:
+        # Capture finale d'erreur
+        snap(driver, "ZZZ_FATAL_ERROR")
+        raise
     finally:
         driver.quit()
 
