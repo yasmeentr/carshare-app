@@ -67,7 +67,7 @@ public class DeleteTripServlet extends HttpServlet {
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
+            request.setAttribute("error", "Erreur lors de la suppression du trajet.");
         }
 
         request.setAttribute("success", "Le trajet a bien été supprimé.");

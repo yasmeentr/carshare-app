@@ -48,12 +48,10 @@ public class MyTripsServlet extends HttpServlet {
                     trip.setStartDate(rs.getTimestamp("start_date").toLocalDateTime());
                     trip.setNbPlaces(rs.getInt("nb_places"));
                     trip.setPrice(rs.getBigDecimal("price"));
-                    trip.setDescription(rs.getString("description"));
                     passengerTrips.add(trip);
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
             request.setAttribute("error", "Erreur lors de la récupération des trajets.");
         }
 
@@ -71,12 +69,10 @@ public class MyTripsServlet extends HttpServlet {
                     trip.setStartDate(rs.getTimestamp("start_date").toLocalDateTime());
                     trip.setNbPlaces(rs.getInt("nb_places"));
                     trip.setPrice(rs.getBigDecimal("price"));
-                    trip.setDescription(rs.getString("description"));
                     driverTrips.add(trip);
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
             request.setAttribute("error", "Erreur lors de la récupération des trajets.");
         }
 

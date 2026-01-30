@@ -113,7 +113,6 @@ public class CreateTripServlet extends HttpServlet {
             request.setAttribute("error", "Veuillez vérifier les champs numériques et la date.");
             doGet(request, response);
         } catch (SQLException e) {
-            e.printStackTrace();
             request.setAttribute("error", "Erreur lors de la création du trajet.");
             doGet(request, response);
         }

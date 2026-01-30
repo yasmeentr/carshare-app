@@ -17,7 +17,7 @@ public class UserDAO {
             InitialContext ctx = new InitialContext();
             dataSource = (DataSource) ctx.lookup("java:comp/env/jdbc/carshare");
         } catch (NamingException e) {
-            e.printStackTrace();
+            e.getMessage();
         }
     }
 }

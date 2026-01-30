@@ -6,6 +6,9 @@
     boolean isOwner = trip.getUserId() == user.getId();
     boolean hasPlaces = trip.getNbPlaces() > 0;
     Boolean alreadyBooked = (Boolean) request.getAttribute("alreadyBooked");
+
+    String error = (String) session.getAttribute("error");
+    String success = (String) session.getAttribute("success");
 %>
 
 <section class="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 to-white">
@@ -57,28 +60,49 @@
                 </div>
             </div>
 
+            <% if (error != null) { %>
+                <div class="mb-4 p-3 bg-red-100 text-red-700 mt-10 rounded">
+                    <%= error %>
+                </div>
+            <%
+                    session.removeAttribute("error");
+                }
+            %>
+            <% if (success != null) { %>
+                <div class="mb-4 p-3 bg-green-100 text-green-700 mt-10 rounded">
+                    <%= success %>
+                </div>
+             <%
+                    session.removeAttribute("success");
+                }
+             %>
+
             <div class="mt-6 flex justify-center gap-4">
                 <% if (isOwner) { %>
                     <button type="button" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer" onclick="openDeleteModal()">
                         Supprimer le trajet
                     </button>
-                    <% } else if(!isOwner && alreadyBooked) { %>
-                    <form action="<%= request.getContextPath() %>/cancelbooking" method="post">
+                <% } %>
+                    
+                <% if(!isOwner && alreadyBooked) { %>
+                    <form action="<%= request.getContextPath() %>/cancelbooktrip" method="post">
                         <input type="hidden" name="trip_id" value="<%= trip.getId() %>">
-                        <button type="submit"
-                                class="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600">
+                        <button type="submit" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 cursor-pointer">
                             Annuler la réservation
                         </button>
                     </form>
-                <% } else if(!isOwner && hasPlaces) { %>
+                <% } else if(!isOwner && hasPlaces && !alreadyBooked) { %>
                     <form method="post" action="<%= request.getContextPath() %>/booktrip">
                         <input type="hidden" name="trip_id" value="<%= trip.getId() %>" />
-                        <button class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded cursor-pointer">Réserver</button>
+                        <button type="submit" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded cursor-pointer">Réserver</button>
                     </form>
-                <% } else if(!isOwner && !hasPlaces) { %>
-                    <p class="text-red-600 font-semibold">Plus de place disponible.</p>
                 <% } %>
             </div>
+                <% if(!hasPlaces) { %>
+                    <div class="mt-6 flex justify-center gap-4">
+                        <p class="text-red-600 font-semibold">Plus de place disponible.</p>
+                    </div>
+                <% } %>
         <% } %>
     </div>
 </section>

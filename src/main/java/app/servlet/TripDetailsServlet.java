@@ -30,6 +30,7 @@ public class TripDetailsServlet extends HttpServlet {
             return;
         }
 
+        User user = (User) session.getAttribute("user");
         String idStr = request.getParameter("id");
         int tripId = -1;
 
@@ -86,7 +87,7 @@ public class TripDetailsServlet extends HttpServlet {
         try (Connection conn = DBUtil.getConnection()) {
             String checkSql = "SELECT COUNT(*) FROM bookings WHERE user_id = ? AND trip_id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(checkSql)) {
-                stmt.setInt(1, trip.getUserId());
+                stmt.setInt(1, user.getId());
                 stmt.setInt(2, tripId);
                 ResultSet rs = stmt.executeQuery();
                 if (rs.next()) {
@@ -94,7 +95,7 @@ public class TripDetailsServlet extends HttpServlet {
                 }
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            request.setAttribute("error", "Erreur lors de la récupération de la réservation.");
         }
 
         request.setAttribute("alreadyBooked", alreadyBooked);

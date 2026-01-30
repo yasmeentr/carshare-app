@@ -5,7 +5,7 @@
         <h1 class="text-4xl font-bold text-blue-700 mb-4">Bienvenue sur Carshare !</h1>
         <p class="text-lg text-gray-600">Trouvez ou proposez un trajet simplement.</p>
 
-        <% 
+        <%  
             String error = (String) request.getAttribute("error");
             String success = (String) request.getAttribute("success");
         %>
@@ -22,7 +22,7 @@
             </div>
         <% } %>
     </div>
-    <div class="bg-white p-6 rounded-2xl shadow-lg w-fit md:w-full md:max-w-6xl space-y-8">
+    <form action="${pageContext.request.contextPath}/searchtrips" method="post" class="bg-white p-6 rounded-2xl shadow-lg w-fit md:w-full md:max-w-6xl space-y-8">
         <div class="grid md:grid-cols-3 gap-4">
             <input type="text" name="depart" placeholder="Départ" list="startOptions" required
                    class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
@@ -54,24 +54,15 @@
                         }
                     %>
                   </datalist>
-            <input type="date" name="date" required
-                   class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+            <input type="date" name="date" class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" required>
         </div>
 
-        <div class="flex justify-around">
-            <form action="<%= request.getContextPath() %>/searchpassagers" method="post" class="flex justify-start w-fit">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition cursor-pointer">
-                    Rechercher un trajet passager
-                </button>
-            </form>
-
-            <form action="<%= request.getContextPath() %>/searchdrivers" method="post" class="flex justify-end w-fit">
-                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition cursor-pointer">
-                    Rechercher un trajet conducteur
-                </button>
-            </form>
+         <div class="flex justify-center">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition cursor-pointer">
+                Rechercher un trajet
+            </button>
         </div>
-    </div>
+    </form>
     <div class="mt-12 text-center">
         <a href="${pageContext.request.contextPath}/createtrip"
            class="inline-block bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-semibold shadow-md">

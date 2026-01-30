@@ -30,7 +30,7 @@
           username="tomcat"
           password="tomcat"
           driverClassName="com.mysql.cj.jdbc.Driver"
-          url="jdbc:mysql://10.11.31.193:3310/carshare?useSSL=false&amp;serverTimezone=UTC"/>
+          url="jdbc:mysql://mysql:3306/carshare?useSSL=false&amp;serverTimezone=UTC"/>
 	
     <!-- Uncomment this to enable session persistence across Tomcat restarts -->
     <!--

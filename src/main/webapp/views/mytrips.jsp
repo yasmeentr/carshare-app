@@ -2,7 +2,7 @@
 
 <section class="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 to-white">
     <div class="container mx-auto px-4 py-6">
-        <h1 class="text-3xl font-bold text-center mb-30">Mes trajets</h1>
+        <h1 class="text-3xl font-bold text-center mb-20">Mes trajets</h1>
 
         <%
             List<Trip> passengerTrips = (List<Trip>) request.getAttribute("passengerTrips");

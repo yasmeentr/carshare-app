@@ -59,7 +59,6 @@ public class DriverTripsServlet extends HttpServlet {
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
             request.setAttribute("error", "Erreur lors de la récupération des trajets.");
         }
 

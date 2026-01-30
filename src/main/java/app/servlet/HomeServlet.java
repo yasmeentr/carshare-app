@@ -33,7 +33,7 @@ public class HomeServlet extends HttpServlet {
                 startTowns.add(rs.getString("start_town"));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+           request.setAttribute("error", "Erreur lors de la récupération des villes de départ.");
         }
 
          try (Connection conn = DBUtil.getConnection();
@@ -44,7 +44,7 @@ public class HomeServlet extends HttpServlet {
                 endTowns.add(rs.getString("end_town"));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            request.setAttribute("error", "Erreur lors de la récupération des villes d'arrivée.");
         }
 
         request.setAttribute("startTowns", startTowns);
