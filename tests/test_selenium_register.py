@@ -85,14 +85,14 @@ def login_flow(driver):
     time.sleep(0.8)  # laisser la redirection démarrer
     snap(driver, "04_after_submit_click")
 
-    # 5) Attendre d'être sur /home
+    # 5) Attendre d'être sur /profil
     try:
-        wait.until(EC.url_contains("/home"))
-        snap(driver, "05_homepage_loaded")
-        print("[SUCCESS] Connexion réussie, page /home chargée.")
+        wait.until(EC.url_contains("/profile"))
+        snap(driver, "05_profilepage_loaded")
+        print("[SUCCESS] Connexion réussie, page /profile chargée.")
     except TimeoutException:
-        print(f"[ERROR] Redirection vers /home non détectée. URL actuelle: {driver.current_url}")
-        snap(driver, "ERROR_home_not_reached")
+        print(f"[ERROR] Redirection vers /profile non détectée. URL actuelle: {driver.current_url}")
+        snap(driver, "ERROR_profile_not_reached")
         # Enrichir le diagnostic: vérifier un message d'erreur éventuel
         try:
             body_text = driver.find_element(By.TAG_NAME, "body").text
