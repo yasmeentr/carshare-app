@@ -57,6 +57,25 @@ pipeline {
             }
         }
 
+        stage ('Tests Fonctionnels Selenium'){
+          steps {
+            echo "Execution des tests fonctionnels sur la préprod ... "
+            
+            sh '''
+              set -e
+              python3 -m venv .venv
+              . .venv/bin/activate
+              pip install --upgrade pip
+              pip install selenium
+        
+              export BASE_URL="http://localhost:8090"
+              export CONTEXT_PATH="/carshare-app"
+        
+              python tests/test_selenium_register.py
+            '''
+          }
+        }
+
     }
 
    
