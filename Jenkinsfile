@@ -270,9 +270,13 @@ pipeline {
         stage('Functional Tests - Register') {
             steps {
                 echo '🧪 Exécution des tests fonctionnels d\'inscription...'
-                script {
-                    sh './tests/test_selenium_register.sh'
-                }
+                sh '''
+                set -eux
+                # Autoriser l'exécution du script si le bit +x n'est pas commité
+                chmod +x tests/test_selenium_register.sh || true
+                # Toujours l'exécuter via bash (ça marche même sans +x)
+                bash ./tests/test_selenium_register.sh
+                '''
             }
             post {
                 always {
@@ -281,7 +285,7 @@ pipeline {
                 }
             }
         }
-        
+ 
         stage('API Health Check') {
             steps {
                 echo '🔍 Vérification des endpoints de l\'application...'
