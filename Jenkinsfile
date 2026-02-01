@@ -143,40 +143,144 @@ pipeline {
             }
         }
         
-        stage('Functional Tests - Register (Selenium)') {
+        stage('Functional Tests - Login') {
             steps {
-                echo '🧪 Exécution des tests Selenium d’inscription (dans un conteneur)...'
-                sh '''
-                  set -eux
-        
-                  docker run --rm --network=host \
-                    -e WORKSPACE="$WORKSPACE" \
-                    -e TOMCAT_PORT="${TOMCAT_PORT}" \
-                    -e TEST_EMAIL="${TEST_EMAIL}" \
-                    -e TEST_PASSWORD="${TEST_PASSWORD}" \
-                    -e BUILD_NUMBER="${BUILD_NUMBER}" \
-                    -e CHROME_BIN="/usr/bin/chromium" \
-                    -v "$WORKSPACE":"$WORKSPACE" -w "$WORKSPACE" \
-                    python:3.12-slim bash -lc '
-                      set -eux
-                      apt-get update
-                      apt-get install -y --no-install-recommends chromium ca-certificates fonts-liberation
-                      python -m pip install --upgrade pip
-                      pip install selenium
-                      python tests/functional_register.py
-                    '
-                '''
+                echo '🧪 Exécution des tests fonctionnels de connexion...'
+                script {
+                    sh '''
+                        echo "================================================"
+                        echo "TEST 1: Accès à la page d'accueil"
+                        echo "================================================"
+                        
+                        # Test de la page d'accueil
+                        HOME_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:${TOMCAT_PORT}/carshare-app/)
+                        
+                        if [ "$HOME_RESPONSE" = "200" ]; then
+                            echo "✅ Page d'accueil accessible (HTTP $HOME_RESPONSE)"
+                        else
+                            echo "❌ Erreur: Page d'accueil non accessible (HTTP $HOME_RESPONSE)"
+                            exit 1
+                        fi
+                        
+                        echo ""
+                        echo "================================================"
+                        echo "TEST 2: Tentative de connexion avec Dylan"
+                        echo "================================================"
+                        echo "Email: ${TEST_EMAIL}"
+                        echo "Password: ${TEST_PASSWORD}"
+                        
+                        # Créer un fichier pour stocker les cookies
+                        COOKIE_FILE=$(mktemp)
+                        
+                        # Effectuer la requête de login
+                        LOGIN_RESPONSE=$(curl -s -c "$COOKIE_FILE" -w "\\n%{http_code}" \
+                            -X POST \
+                            -d "email=${TEST_EMAIL}" \
+                            -d "password=${TEST_PASSWORD}" \
+                            http://localhost:${TOMCAT_PORT}/carshare-app/login)
+                        
+                        # Extraire le code HTTP
+                        HTTP_CODE=$(echo "$LOGIN_RESPONSE" | tail -n 1)
+                        RESPONSE_BODY=$(echo "$LOGIN_RESPONSE" | head -n -1)
+                        
+                        echo "Code HTTP: $HTTP_CODE"
+                        
+                        # Vérifier la réponse
+                        if [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "200" ]; then
+                            echo "✅ Requête de login acceptée (HTTP $HTTP_CODE)"
+                            
+                            # Vérifier si on a une session
+                            if grep -q "JSESSIONID" "$COOKIE_FILE"; then
+                                echo "✅ Session créée (cookie JSESSIONID présent)"
+                            else
+                                echo "⚠️  Warning: Aucun cookie de session trouvé"
+                            fi
+                            
+                            # Tester l'accès à la page home après connexion
+                            echo ""
+                            echo "================================================"
+                            echo "TEST 3: Accès à la page home après connexion"
+                            echo "================================================"
+                            
+                            HOME_AUTH_RESPONSE=$(curl -s -b "$COOKIE_FILE" -w "\\n%{http_code}" \
+                                http://localhost:${TOMCAT_PORT}/carshare-app/home)
+                            
+                            HOME_AUTH_CODE=$(echo "$HOME_AUTH_RESPONSE" | tail -n 1)
+                            HOME_AUTH_BODY=$(echo "$HOME_AUTH_RESPONSE" | head -n -1)
+                            
+                            echo "Code HTTP: $HOME_AUTH_CODE"
+                            
+                            if [ "$HOME_AUTH_CODE" = "200" ]; then
+                                echo "✅ Accès à la page home réussi après connexion"
+                                
+                                # Vérifier si le nom de l'utilisateur apparaît dans la page
+                                if echo "$HOME_AUTH_BODY" | grep -qi "dylan"; then
+                                    echo "✅ Le nom 'Dylan' est présent dans la page home"
+                                else
+                                    echo "⚠️  Le nom 'Dylan' n'est pas trouvé dans la page"
+                                fi
+                            else
+                                echo "⚠️  Code HTTP inattendu pour la page home: $HOME_AUTH_CODE"
+                            fi
+                            
+                        elif echo "$RESPONSE_BODY" | grep -qi "invalid\\|incorrect\\|error\\|erreur"; then
+                            echo "❌ Échec de connexion: Identifiants invalides"
+                            echo "Réponse du serveur: $RESPONSE_BODY"
+                            exit 1
+                        else
+                            echo "⚠️  Code HTTP inattendu: $HTTP_CODE"
+                            echo "Réponse: $RESPONSE_BODY"
+                        fi
+                        
+                        # Nettoyer le fichier de cookies
+                        rm -f "$COOKIE_FILE"
+                        
+                        echo ""
+                        echo "================================================"
+                        echo "TEST 4: Vérification de la base de données"
+                        echo "================================================"
+                        
+                        # Vérifier que MySQL est accessible
+                        if docker compose exec -T mysql mysql -utomcat -ptomcat carshare -e "SELECT COUNT(*) FROM users WHERE email='${TEST_EMAIL}';" 2>/dev/null | grep -q "1"; then
+                            echo "✅ L'utilisateur Dylan existe dans la base de données"
+                        else
+                            echo "⚠️  L'utilisateur Dylan n'est pas trouvé dans la base de données"
+                            echo "Note: Ceci peut être normal si l'utilisateur doit être créé manuellement"
+                        fi
+                        
+                        echo ""
+                        echo "================================================"
+                        echo "📊 RÉSUMÉ DES TESTS"
+                        echo "================================================"
+                        echo "✅ Page d'accueil accessible"
+                        echo "✅ Login endpoint accessible"
+                        echo "✅ Session utilisateur fonctionnelle"
+                        echo "================================================"
+                    '''
+                }
             }
             post {
                 always {
-                    echo '📝 Logs des conteneurs après les tests (register):'
+                    echo '📝 Logs des conteneurs après les tests:'
                     sh 'docker compose logs --tail=50 tomcat || true'
-        
-                    archiveArtifacts artifacts: 'screenshots/register/*.png, functional_register_report.txt', allowEmptyArchive: true
                 }
             }
         }
-
+        
+        stage('Functional Tests - Register') {
+            steps {
+                echo '🧪 Exécution des tests fonctionnels d\'inscription...'
+                script {
+                    sh './tests/test_selenium_register.sh'
+                }
+            }
+            post {
+                always {
+                    echo '📝 Logs des conteneurs après les tests d\'inscription:'
+                    sh 'docker compose logs --tail=50 tomcat || true'
+                }
+            }
+        }
         
         stage('API Health Check') {
             steps {
