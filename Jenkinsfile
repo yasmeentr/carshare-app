@@ -316,6 +316,28 @@ pipeline {
           }
         }
 
+        
+        stage('API Health Check') {
+            steps {
+                echo '🔍 Vérification des endpoints de l\'application...'
+                script {
+                    sh '''
+                        echo "Endpoints disponibles:"
+                        echo "- Page d'accueil: http://localhost:${TOMCAT_PORT}/carshare-app/"
+                        echo "- Login: http://localhost:${TOMCAT_PORT}/carshare-app/login"
+                        echo "- Register: http://localhost:${TOMCAT_PORT}/carshare-app/register"
+                        echo "- PHPMyAdmin: http://localhost:${PHPMYADMIN_PORT}"
+                        
+                        # Tester quelques endpoints basiques
+                        curl -s -o /dev/null -w "Login page: %{http_code}\\n" \
+                            http://localhost:${TOMCAT_PORT}/carshare-app/login
+                        
+                        curl -s -o /dev/null -w "Register page: %{http_code}\\n" \
+                            http://localhost:${TOMCAT_PORT}/carshare-app/register
+                    '''
+                }
+            }
+        }
     }
     
     post {
