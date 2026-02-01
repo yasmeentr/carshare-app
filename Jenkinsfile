@@ -304,7 +304,7 @@ pipeline {
               pip install --no-cache-dir locust
         
               # 4) Exécuter Locust en mode headless
-              .venv/bin/locust -f locustfile.py --headless \
+              .venv/bin/locust -f ./tests/locustfile.py --headless \
                 -u 5 -r 1 -H http://localhost:8090 --run-time 10s \
                 --csv locust_report
         
