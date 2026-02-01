@@ -143,6 +143,79 @@ pipeline {
             }
         }
         
+        stage('API Health Check') {
+            steps {
+                echo '🔍 Vérification des endpoints de l\'application...'
+                script {
+                    sh '''
+                        echo "Endpoints disponibles:"
+                        echo "- Page d'accueil: http://localhost:${TOMCAT_PORT}/carshare-app/"
+                        echo "- Login: http://localhost:${TOMCAT_PORT}/carshare-app/login"
+                        echo "- Register: http://localhost:${TOMCAT_PORT}/carshare-app/register"
+                        echo "- PHPMyAdmin: http://localhost:${PHPMYADMIN_PORT}"
+                        
+                        # Tester quelques endpoints basiques
+                        curl -s -o /dev/null -w "Login page: %{http_code}\\n" \
+                            http://localhost:${TOMCAT_PORT}/carshare-app/login
+                        
+                        curl -s -o /dev/null -w "Register page: %{http_code}\\n" \
+                            http://localhost:${TOMCAT_PORT}/carshare-app/register
+                    '''
+                }
+            }
+        }
+
+  
+        stage('Functional Tests - Register') {
+          steps {
+            echo "🧪 Exécution des tests fonctionnels d'inscription..."
+            sh '''
+              set -eux
+        
+              # 1) Attente MySQL prêt (max ~2 min)
+              echo "⏳ Attente de MySQL..."
+              for i in $(seq 1 80); do
+                if docker compose exec -T mysql mysql -utomcat -ptomcat -e "SELECT 1" carshare >/dev/null 2>&1; then
+                  echo "✅ MySQL OK"
+                  break
+                fi
+                sleep 2
+                if [ $i -eq 80 ]; then
+                  echo "❌ MySQL pas prêt après 160s"; docker compose logs mysql | tail -n 100 || true; exit 1
+                fi
+              done
+        
+              # 2) Attente HTTP 200 sur /register (max ~2 min)
+              echo "⏳ Attente endpoint /register (HTTP 200)..."
+              for i in $(seq 1 80); do
+                CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:${TOMCAT_PORT}/carshare-app/register" || true)
+                if [ "$CODE" = "200" ]; then
+                  echo "✅ /register renvoie 200"
+                  break
+                fi
+                echo "ℹ️  /register encore indisponible (HTTP $CODE), tentative $i/80..."
+                sleep 2
+                if [ $i -eq 80 ]; then
+                  echo "❌ /register pas prêt après 160s"
+                  curl -i "http://localhost:${TOMCAT_PORT}/carshare-app/register" || true
+                  docker compose logs --tail=100 tomcat || true
+                  exit 1
+                fi
+              done
+        
+              # 3) Lancer le script de test Selenium
+              chmod +x tests/test_selenium_register.sh || true
+              bash ./tests/test_selenium_register.sh
+            '''
+          }
+          post {
+            always {
+              echo "📝 Logs des conteneurs après les tests d'inscription:"
+              sh 'docker compose logs --tail=50 tomcat || true'
+            }
+          }
+        }
+
         stage('Functional Tests - Login') {
             steps {
                 echo '🧪 Exécution des tests fonctionnels de connexion...'
@@ -266,49 +339,8 @@ pipeline {
                 }
             }
         }
-        
-        stage('Functional Tests - Register') {
-            steps {
-                echo '🧪 Exécution des tests fonctionnels d\'inscription...'
-                sh '''
-                set -eux
-                # Autoriser l'exécution du script si le bit +x n'est pas commité
-                chmod +x tests/test_selenium_register.sh || true
-                # Toujours l'exécuter via bash (ça marche même sans +x)
-                bash ./tests/test_selenium_register.sh
-                '''
-            }
-            post {
-                always {
-                    echo '📝 Logs des conteneurs après les tests d\'inscription:'
-                    sh 'docker compose logs --tail=50 tomcat || true'
-                }
-            }
-        }
- 
-        stage('API Health Check') {
-            steps {
-                echo '🔍 Vérification des endpoints de l\'application...'
-                script {
-                    sh '''
-                        echo "Endpoints disponibles:"
-                        echo "- Page d'accueil: http://localhost:${TOMCAT_PORT}/carshare-app/"
-                        echo "- Login: http://localhost:${TOMCAT_PORT}/carshare-app/login"
-                        echo "- Register: http://localhost:${TOMCAT_PORT}/carshare-app/register"
-                        echo "- PHPMyAdmin: http://localhost:${PHPMYADMIN_PORT}"
-                        
-                        # Tester quelques endpoints basiques
-                        curl -s -o /dev/null -w "Login page: %{http_code}\\n" \
-                            http://localhost:${TOMCAT_PORT}/carshare-app/login
-                        
-                        curl -s -o /dev/null -w "Register page: %{http_code}\\n" \
-                            http://localhost:${TOMCAT_PORT}/carshare-app/register
-                    '''
-                }
-            }
-        }
     }
-    
+  
     post {
         always {
             echo 'Pipeline terminé'
