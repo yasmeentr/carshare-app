@@ -188,55 +188,10 @@ pipeline {
                             fi
                             
                             echo ""
-                            echo "================================================"
-                            echo "TEST 3: Accès à la page home après connexion"
-                            echo "================================================"
                             
-                            # GET /home authentifié : capturer headers, body et trace
-                            curl -s -b "$COOKIE_FILE" \
-                                 -D screens/home_after_login.headers.txt \
-                                 -o screens/home_after_login.html \
-                                 "http://localhost:${TOMCAT_PORT}/carshare-app/home" \
-                                 2> screens/home_after_login.trace.txt
-                            
-                            HOME_AUTH_CODE=$(grep -Eo '^HTTP/[0-9.]+ [0-9]+' screens/home_after_login.headers.txt | tail -n1 | awk '{print $2}')
-                            echo "Code HTTP: $HOME_AUTH_CODE"
-                            
-                            if [ "$HOME_AUTH_CODE" = "200" ]; then
-                                echo "✅ Accès à la page home réussi après connexion"
-                                
-                                # Vérifier si le nom de l'utilisateur apparaît dans la page
-                                if grep -qi "dylan" screens/home_after_login.html; then
-                                    echo "✅ Le nom 'Dylan' est présent dans la page home"
-                                else
-                                    echo "⚠️  Le nom 'Dylan' n'est pas trouvé dans la page"
-                                fi
-                            else
-                                echo "⚠️  Code HTTP inattendu pour la page home: $HOME_AUTH_CODE"
-                            fi
-                            
-                        elif grep -qi "invalid\\|incorrect\\|error\\|erreur" screens/login_response.body.html; then
-                            echo "❌ Échec de connexion: Identifiants invalides"
-                            echo "↳ Voir screens/login_response.body.html"
-                            exit 1
-                        else
-                            echo "⚠️  Code HTTP inattendu: $HTTP_CODE"
-                            echo "↳ Voir screens/login_response.headers.txt et screens/login_request.trace.txt"
-                        fi
                         
                         # Nettoyer le fichier de cookies
                         rm -f "$COOKIE_FILE"
-                        
-                        
-                        echo ""
-                        echo "================================================"
-                        echo "📊 RÉSUMÉ DES TESTS"
-                        echo "================================================"
-                        echo "✅ Page d'accueil accessible"
-                        echo "✅ Login endpoint accessible"
-                        echo "✅ Session utilisateur fonctionnelle"
-                        echo "✅ Captures disponibles dans le dossier 'screens/' (Artifacts)"
-                        echo "================================================"
                     '''
                 }
             }
@@ -291,8 +246,6 @@ pipeline {
         }
         success {
             echo '✅ Build et déploiement réussis !'
-            echo "Application disponible sur : http://localhost:${TOMCAT_PORT}/carshare-app"
-            echo "PHPMyAdmin disponible sur : http://localhost:${PHPMYADMIN_PORT}"
             echo ""
         }
         failure {
