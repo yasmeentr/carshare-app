@@ -12,12 +12,26 @@
   <dependencies>
     <!-- Dépendance pour les tests unitaires -->
     <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>3.8.1</version>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.0</version>
       <scope>test</scope>
     </dependency>
-    
+    <!-- Selenium pour tests fonctionnels -->
+<dependency>
+    <groupId>org.seleniumhq.selenium</groupId>
+    <artifactId>selenium-java</artifactId>
+    <version>4.14.0</version>
+    <scope>test</scope>
+</dependency>
+
+<!-- TestNG pour structurer les tests -->
+<dependency>
+    <groupId>org.testng</groupId>
+    <artifactId>testng</artifactId>
+    <version>7.8.0</version>
+    <scope>test</scope>
+</dependency>    
     <!-- Dépendance pour Jakarta EE 10 -->
     <dependency>
         <groupId>jakarta.platform</groupId>
@@ -51,6 +65,17 @@
       <artifactId>maven-war-plugin</artifactId>
       <version>3.3.1</version> <!-- Nouvelle version stable -->
     </plugin>
+	<plugin>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-surefire-plugin</artifactId>
+    <version>3.1.2</version>
+    <configuration>
+        <includes>
+          <include>**/*Test.java</include>
+        </includes>
+    </configuration>
+</plugin>
+
     </plugins>
     
     <!-- Nom final du fichier généré -->

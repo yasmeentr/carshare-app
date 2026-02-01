@@ -1,12 +1,7 @@
 services:
 
   tomcat:
-    image: tomcat
-    build:
-      context: .
-      dockerfile: Dockerfile
-    volumes:
-      - ./target/carshare-app:/usr/local/tomcat/webapps/carshare-app/
+    image: zineb417/carshare-app:latest
     ports:
       - "8090:8080"
     networks:
@@ -51,5 +46,5 @@ volumes:
   mysql-data:
 
 networks:
-    carshare:
-        driver: bridge
+  carshare:
+    driver: bridge
