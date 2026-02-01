@@ -145,23 +145,33 @@ pipeline {
         
         stage('Functional Tests - Register (Selenium)') {
             steps {
+                echo '🧪 Exécution des tests Selenium d’inscription (dans un conteneur)...'
                 sh '''
                   set -eux
-                  # Installer Chromium (si tu as sudo/root)
-                  sudo apt-get update
-                  sudo apt-get install -y chromium
         
-                  # Venv isolée pour selenium
-                  python3 -m venv .venv
-                  . .venv/bin/activate
-                  pip install --upgrade pip
-                  pip install selenium
-        
-                  CHROME_BIN=/usr/bin/chromium .venv/bin/python tests/functional_register.py
+                  docker run --rm --network=host \
+                    -e WORKSPACE="$WORKSPACE" \
+                    -e TOMCAT_PORT="${TOMCAT_PORT}" \
+                    -e TEST_EMAIL="${TEST_EMAIL}" \
+                    -e TEST_PASSWORD="${TEST_PASSWORD}" \
+                    -e BUILD_NUMBER="${BUILD_NUMBER}" \
+                    -e CHROME_BIN="/usr/bin/chromium" \
+                    -v "$WORKSPACE":"$WORKSPACE" -w "$WORKSPACE" \
+                    python:3.12-slim bash -lc '
+                      set -eux
+                      apt-get update
+                      apt-get install -y --no-install-recommends chromium ca-certificates fonts-liberation
+                      python -m pip install --upgrade pip
+                      pip install selenium
+                      python tests/functional_register.py
+                    '
                 '''
             }
             post {
                 always {
+                    echo '📝 Logs des conteneurs après les tests (register):'
+                    sh 'docker compose logs --tail=50 tomcat || true'
+        
                     archiveArtifacts artifacts: 'screenshots/register/*.png, functional_register_report.txt', allowEmptyArchive: true
                 }
             }
