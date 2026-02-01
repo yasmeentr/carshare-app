@@ -1,4 +1,3 @@
-explique moi en detail ce code
 pipeline {
     agent any
     
