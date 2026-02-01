@@ -285,12 +285,34 @@ pipeline {
 
         
         stage('Load Test - Locust') {
-            steps {
-                sh """
-                pip install locust
-                locust -f locustfile.py --headless -u 5 -r 1 -H http://localhost:8090 --run-time 10s
-                """
-            }
+          steps {
+            sh '''
+              set -e
+        
+              # 1) S'assurer d'avoir le module venv
+              if ! python3 -m venv --help >/dev/null 2>&1; then
+                sudo apt-get update
+                sudo apt-get install -y python3-venv
+              fi
+        
+              # 2) Créer et activer un venv local au workspace
+              python3 -m venv .venv
+              . .venv/bin/activate
+        
+              # 3) Installer Locust DANS le venv (pas global -> pas de PEP 668)
+              pip install --upgrade pip
+              pip install --no-cache-dir locust
+        
+              # 4) Exécuter Locust en mode headless
+              .venv/bin/locust -f locustfile.py --headless \
+                -u 5 -r 1 -H http://localhost:8090 --run-time 10s \
+                --csv locust_report
+        
+              # 5) Désactiver
+              deactivate
+            '''
+            archiveArtifacts artifacts: 'locust_report*', fingerprint: true, onlyIfSuccessful: false
+          }
         }
 
         
