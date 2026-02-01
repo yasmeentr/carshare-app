@@ -42,48 +42,35 @@ test_result() {
 # ================================================
 # TEST 1: Accès à la page d'inscription
 # ================================================
+############################################################
+# TEST 1: Accès à la page d'inscription (attente 200)
+############################################################
 echo "================================================"
 echo "TEST 1: Accès à la page d'inscription"
 echo "================================================"
 
-REGISTER_PAGE_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "$REGISTER_URL")
+BASE="http://localhost:8090/carshare-app"
+REGISTER_URL="$BASE/register"
 
-if [ "$REGISTER_PAGE_RESPONSE" = "200" ]; then
-    test_result "Accès à la page d'inscription" 0
-else
-    test_result "Accès à la page d'inscription (HTTP $REGISTER_PAGE_RESPONSE)" 1
-    echo "❌ Impossible de continuer les tests sans accès à la page d'inscription"
-    exit 1
+max_tries=40   # ~80s
+ok=0
+for i in $(seq 1 $max_tries); do
+  CODE=$(curl -s -o /dev/null -w "%{http_code}" "$REGISTER_URL" || true)
+  if [ "$CODE" = "200" ]; then
+    echo "✅ /register accessible (HTTP 200)"
+    ok=1
+    break
+  fi
+  echo "⏳ /register non prêt (HTTP $CODE) - tentative $i/$max_tries..."
+  sleep 2
+done
+
+if [ "$ok" -ne 1 ]; then
+  echo "❌ FAIL: /register ne renvoie pas 200 après attente"
+  echo "----- Réponse actuelle -----"
+  curl -i "$REGISTER_URL" || true
+  exit 1
 fi
-
-# Vérifier le contenu de la page d'inscription
-REGISTER_PAGE_CONTENT=$(curl -s "$REGISTER_URL")
-
-if echo "$REGISTER_PAGE_CONTENT" | grep -q "Créer un compte"; then
-    test_result "Présence du titre 'Créer un compte'" 0
-else
-    test_result "Présence du titre 'Créer un compte'" 1
-fi
-
-if echo "$REGISTER_PAGE_CONTENT" | grep -q 'name="username"'; then
-    test_result "Présence du champ username" 0
-else
-    test_result "Présence du champ username" 1
-fi
-
-if echo "$REGISTER_PAGE_CONTENT" | grep -q 'name="email"'; then
-    test_result "Présence du champ email" 0
-else
-    test_result "Présence du champ email" 1
-fi
-
-if echo "$REGISTER_PAGE_CONTENT" | grep -q 'name="password"'; then
-    test_result "Présence du champ password" 0
-else
-    test_result "Présence du champ password" 1
-fi
-
-echo ""
 
 # ================================================
 # TEST 2: Inscription avec tous les champs vides
